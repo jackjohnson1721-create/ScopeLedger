@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
@@ -15,13 +16,37 @@ export default async function DashboardPage() {
     .eq("status", "active");
 
   const membership = memberships?.[0];
-  const { data: org } = membership
-    ? await supabase
+  if (!membership) redirect("/onboarding");
+
+  const [{ data: org }, { count: scopeCount }, { data: metricsRows }, { count: hitlCount }] =
+    await Promise.all([
+      supabase
         .from("organizations")
         .select("name, slug, plan")
         .eq("id", membership.org_id)
-        .maybeSingle()
-    : { data: null };
+        .maybeSingle(),
+      supabase
+        .from("scope_identity")
+        .select("*", { count: "exact", head: true })
+        .eq("org_id", membership.org_id),
+      supabase
+        .from("derived_metrics")
+        .select("threshold_flag, rolling_12mo_spend_cents")
+        .eq("org_id", membership.org_id),
+      supabase
+        .from("repair_event_candidates")
+        .select("*", { count: "exact", head: true })
+        .eq("org_id", membership.org_id)
+        .eq("hitl_status", "pending"),
+    ]);
+
+  const totalSpendCents = (metricsRows ?? []).reduce(
+    (a, r) => a + Number(r.rolling_12mo_spend_cents ?? 0),
+    0,
+  );
+  const flaggedCount = (metricsRows ?? []).filter(
+    (r) => r.threshold_flag === "yellow" || r.threshold_flag === "red",
+  ).length;
 
   return (
     <main className="min-h-screen bg-cloud-50">
@@ -30,36 +55,36 @@ export default async function DashboardPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-cloud-600">Dashboard</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-cloud-900">
-              Welcome back
+              {org?.name ?? "Welcome"}
             </h1>
           </div>
-          <p className="text-sm text-cloud-700">{user.email}</p>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/scopes" className="text-cloud-700 hover:text-cloud-900">Scopes</Link>
+            <Link href="/invoices" className="text-cloud-700 hover:text-cloud-900">Invoices</Link>
+            <Link href="/hitl" className="text-cloud-700 hover:text-cloud-900">HITL</Link>
+            <Link href="/admin" className="text-cloud-700 hover:text-cloud-900">Admin</Link>
+            <span className="text-cloud-500">{user.email}</span>
+          </nav>
         </header>
 
         <section className="mt-8 grid gap-4 md:grid-cols-3">
-          <Stat label="Scopes" value="—" hint="Phase 5" />
-          <Stat label="Rolling 12mo spend" value="—" hint="Phase 3" />
-          <Stat label="Flagged scopes" value="—" hint="Phase 3" />
+          <Stat label="Scopes" value={String(scopeCount ?? 0)} />
+          <Stat
+            label="Rolling 12mo spend"
+            value={`$${(totalSpendCents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
+          />
+          <Stat
+            label="Flagged scopes"
+            value={String(flaggedCount)}
+            hint={hitlCount ? `${hitlCount} awaiting HITL` : undefined}
+          />
         </section>
 
-        <section className="mt-10 rounded-2xl border border-cloud-100 bg-white/80 p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-cloud-600">
-            Phase 1 foundation
-          </h2>
-          <p className="mt-2 text-sm text-cloud-700">
-            You're signed in and your organization is provisioned. Ingestion, threshold engine,
-            PDF generation, and Zoho sync arrive in Phases 2–8.
+        {org && membership && (
+          <p className="mt-6 text-sm text-cloud-500">
+            {membership.role} · plan: {org.plan}
           </p>
-          {org && membership && (
-            <p className="mt-4 text-sm text-cloud-700">
-              Organization:{" "}
-              <span className="font-medium text-cloud-900">{org.name}</span>{" "}
-              <span className="text-cloud-500">
-                · {membership.role} · {org.plan}
-              </span>
-            </p>
-          )}
-        </section>
+        )}
       </div>
     </main>
   );
