@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-cloud-50 text-cloud-900 antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Subtle focus ring used across the app. Accessibility requirement. */
+:focus-visible {
+  @apply outline-none ring-2 ring-cloud-500 ring-offset-2 ring-offset-cloud-50;
+}
+
+/* Reusable cloudscape gradient used on the landing hero and auth pages. */
+.cloudscape {
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(227, 242, 253, 0.9), transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(255, 249, 196, 0.6), transparent 60%),
+    radial-gradient(800px 400px at 50% 100%, rgba(255, 204, 188, 0.45), transparent 60%);
+}

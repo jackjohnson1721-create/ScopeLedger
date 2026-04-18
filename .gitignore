@@ -1,1 +1,39 @@
 .claude/settings.local.json
+
+# node / next
+node_modules
+.next
+out
+dist
+.vercel
+.turbo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# testing
+coverage
+test-results
+playwright-report
+playwright/.cache
+
+# supabase
+supabase/.branches
+supabase/.temp
+
+# editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# typescript
+*.tsbuildinfo
