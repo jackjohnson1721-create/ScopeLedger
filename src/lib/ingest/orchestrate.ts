@@ -16,6 +16,7 @@
 import { runOcrWithFallback, type OcrProvider } from "@/lib/ocr";
 import { classifyVendor } from "@/lib/llm/classifier";
 import { extractRepairEvents, type ExtractorResult } from "@/lib/llm/extractor";
+import { stitchCandidate, STITCH_AUTO_PROMOTE, type ScopeRow } from "@/lib/metrics/stitching";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const HITL_FIELD_CONFIDENCE_THRESHOLD = 0.85;
@@ -120,20 +121,23 @@ export async function orchestrateIngest(
       })
       .eq("id", auditId);
 
-    const hitlFlagged = extraction.candidates.some((c) =>
-      Object.values(c.field_confidence ?? {}).some(
-        (v) => typeof v === "number" && v < HITL_FIELD_CONFIDENCE_THRESHOLD,
-      ),
+    const vendorId = await upsertVendor(
+      service,
+      input.orgId,
+      vendor.vendor_name,
+      vendor.category,
+      vendor.confidence,
     );
 
-    await upsertVendor(service, input.orgId, vendor.vendor_name, vendor.category, vendor.confidence);
-
-    await persistCandidates(service, {
+    const scopes = await loadScopes(service, input.orgId);
+    const { promoted, pending } = await persistCandidates(service, {
       orgId: input.orgId,
       auditId,
+      vendorId,
       extraction,
-      hitlFlagged,
+      scopes,
     });
+    const hitlFlagged = pending > 0;
 
     await service
       .from("ingestion_audit")
@@ -143,7 +147,7 @@ export async function orchestrateIngest(
     return {
       ingestion_audit_id: auditId,
       status: hitlFlagged ? "hitl_pending" : "persisted",
-      candidate_count: extraction.candidates.length,
+      candidate_count: promoted + pending,
       hitl_flagged: hitlFlagged,
     };
   } catch (err) {
@@ -166,9 +170,9 @@ async function upsertVendor(
   name: string,
   category: "oem_direct" | "iso_third_party" | "internal_biomed" | "unknown",
   confidence: number,
-) {
+): Promise<string | null> {
   const canonical = name.trim().toLowerCase().replace(/\s+/g, " ");
-  await service
+  const { data } = await service
     .from("vendor_metadata")
     .upsert(
       {
@@ -179,7 +183,18 @@ async function upsertVendor(
         classification_confidence: confidence,
       },
       { onConflict: "org_id,canonical_key" },
-    );
+    )
+    .select("id")
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+async function loadScopes(service: SupabaseClient, orgId: string): Promise<ScopeRow[]> {
+  const { data } = await service
+    .from("scope_identity")
+    .select("id, oem_serial_number, asset_tag, internal_id")
+    .eq("org_id", orgId);
+  return (data ?? []) as ScopeRow[];
 }
 
 async function persistCandidates(
@@ -187,16 +202,58 @@ async function persistCandidates(
   params: {
     orgId: string;
     auditId: string;
+    vendorId: string | null;
     extraction: ExtractorResult;
-    hitlFlagged: boolean;
+    scopes: ScopeRow[];
   },
-) {
-  const rows = params.extraction.candidates.map((c) => {
+): Promise<{ promoted: number; pending: number }> {
+  let promoted = 0;
+  let pending = 0;
+  for (const c of params.extraction.candidates) {
     const fieldConfs = Object.values(c.field_confidence ?? {}).filter(
       (v): v is number => typeof v === "number",
     );
-    const minConf = fieldConfs.length ? Math.min(...fieldConfs) : 0;
-    return {
+    const minFieldConf = fieldConfs.length ? Math.min(...fieldConfs) : 0;
+
+    const stitch = stitchCandidate(
+      {
+        candidate_oem_serial_number: c.oem_serial_number ?? null,
+        candidate_asset_tag: c.asset_tag ?? null,
+      },
+      params.scopes,
+    );
+
+    const autoPromote =
+      stitch.scope_id !== null &&
+      stitch.confidence >= STITCH_AUTO_PROMOTE &&
+      minFieldConf >= HITL_FIELD_CONFIDENCE_THRESHOLD &&
+      typeof c.cost_cents === "number" &&
+      typeof c.service_date === "string";
+
+    if (autoPromote && stitch.scope_id && c.cost_cents !== null && c.service_date) {
+      await service.from("repair_event").insert({
+        org_id: params.orgId,
+        scope_id: stitch.scope_id,
+        vendor_id: params.vendorId,
+        service_date: c.service_date,
+        completion_date: c.completion_date,
+        failure_mode_code: c.failure_mode_code,
+        description: c.description,
+        cost_cents: c.cost_cents,
+        currency: c.currency ?? "USD",
+        loaner_days: c.loaner_days,
+        loaner_attributable: (c.loaner_days ?? 0) > 0,
+        stitching_confidence: stitch.confidence,
+        extraction_confidence: minFieldConf,
+        source: "contracts_mailbox",
+        ingestion_audit_id: params.auditId,
+        hitl_status: "not_required",
+      });
+      promoted++;
+      continue;
+    }
+
+    await service.from("repair_event_candidates").insert({
       org_id: params.orgId,
       ingestion_audit_id: params.auditId,
       candidate_oem_serial_number: c.oem_serial_number,
@@ -208,13 +265,13 @@ async function persistCandidates(
       cost_cents: c.cost_cents,
       currency: c.currency,
       loaner_days: c.loaner_days,
-      extraction_confidence: minConf,
+      extraction_confidence: minFieldConf,
+      stitching_confidence: stitch.confidence,
+      matched_scope_id: stitch.scope_id,
       source: "contracts_mailbox" as const,
-      hitl_status: minConf < HITL_FIELD_CONFIDENCE_THRESHOLD ? "pending" : "not_required",
-    };
-  });
-
-  if (rows.length === 0) return;
-
-  await service.from("repair_event_candidates").insert(rows);
+      hitl_status: "pending",
+    });
+    pending++;
+  }
+  return { promoted, pending };
 }
