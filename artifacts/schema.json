@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scopeledger.io/schemas/v1.json",
+  "title": "ScopeLedger Canonical Data Model",
+  "description": "Draft v1 — DRAFT, pending user approval (see plan Phase 1 gate). Once approved, additive-only until V1.1.",
+  "version": "1.0.0-draft",
+  "type": "object",
+  "required": [
+    "organization",
+    "membership",
+    "scope_identity",
+    "failure_mode_taxonomy",
+    "repair_event",
+    "derived_metrics",
+    "vendor_metadata",
+    "ingestion_audit",
+    "capital_request",
+    "billing"
+  ],
+  "properties": {
+    "organization": {
+      "type": "object",
+      "description": "Hospital / IDN tenant. Root of RLS scope.",
+      "required": ["id", "name", "plan", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{3,40}$",
+          "description": "Used for Postmark MailboxHash (slug@in.scopeledger.io)"
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["free", "pro_light", "pro_standard", "enterprise"]
+        },
+        "identity_key_policy": {
+          "type": "string",
+          "enum": ["oem_serial_number", "asset_tag", "internal_id", "composite"],
+          "default": "oem_serial_number"
+        },
+        "threshold_yellow_pct": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.45 },
+        "threshold_red_pct": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.60 },
+        "zoho_crm_account_id": { "type": ["string", "null"] },
+        "zoho_books_customer_id": { "type": ["string", "null"] },
+        "zoho_subscription_id": { "type": ["string", "null"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "membership": {
+      "type": "object",
+      "description": "User ↔ organization join with role. A user can belong to multiple orgs.",
+      "required": ["id", "user_id", "org_id", "role", "status", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "role": {
+          "type": "string",
+          "enum": ["spd_manager", "biomed", "cfo_readonly", "admin", "platform_super_admin"]
+        },
+        "status": { "type": "string", "enum": ["invited", "active", "disabled"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "scope_identity": {
+      "type": "object",
+      "description": "One row per physical rigid endoscope the hospital owns. Identity-stitching target.",
+      "required": ["id", "org_id", "oem", "status", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "oem_serial_number": { "type": ["string", "null"], "maxLength": 100 },
+        "asset_tag": { "type": ["string", "null"], "maxLength": 100 },
+        "internal_id": { "type": ["string", "null"], "maxLength": 100 },
+        "oem": {
+          "type": "string",
+          "enum": ["stryker", "olympus", "karl_storz", "richard_wolf", "smith_nephew", "conmed", "other"]
+        },
+        "model_name": { "type": ["string", "null"] },
+        "scope_type": {
+          "type": ["string", "null"],
+          "enum": [null, "rigid_arthroscope", "rigid_laparoscope", "rigid_cystoscope", "rigid_hysteroscope", "rigid_sinuscope", "other"]
+        },
+        "acquisition_date": { "type": ["string", "null"], "format": "date" },
+        "acquisition_cost_cents": { "type": ["integer", "null"], "minimum": 0 },
+        "replacement_cost_cents": { "type": ["integer", "null"], "minimum": 0 },
+        "status": {
+          "type": "string",
+          "enum": ["active", "retired", "replaced", "loaner_pool"]
+        },
+        "retirement_date": { "type": ["string", "null"], "format": "date" },
+        "notes": { "type": ["string", "null"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "failure_mode_taxonomy": {
+      "type": "object",
+      "description": "Controlled vocabulary for failure_mode on repair_event. Seeded at install.",
+      "required": ["id", "code", "label", "causation"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "code": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "label": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "causation": { "type": "string", "enum": ["wear", "handling", "contamination", "unknown"] },
+        "distal_tip": { "type": "boolean", "default": false }
+      }
+    },
+    "repair_event": {
+      "type": "object",
+      "description": "One repair transaction for one scope. Threshold engine input.",
+      "required": ["id", "org_id", "scope_id", "service_date", "cost_cents", "source", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "scope_id": { "type": "string", "format": "uuid" },
+        "vendor_id": { "type": ["string", "null"], "format": "uuid" },
+        "service_date": { "type": "string", "format": "date" },
+        "completion_date": { "type": ["string", "null"], "format": "date" },
+        "failure_mode_code": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] },
+        "cost_cents": { "type": "integer", "minimum": 0 },
+        "currency": { "type": "string", "default": "USD" },
+        "loaner_days": { "type": ["integer", "null"], "minimum": 0 },
+        "loaner_attributable": {
+          "type": "boolean",
+          "description": "True if loaner dispatched within 48h of repair completion.",
+          "default": false
+        },
+        "stitching_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "extraction_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "source": {
+          "type": "string",
+          "enum": ["spd_forward", "contracts_mailbox", "oem_portal", "manual_entry", "zoho_books", "censitrac", "spm", "nuvolo"]
+        },
+        "ingestion_audit_id": { "type": ["string", "null"], "format": "uuid" },
+        "hitl_status": { "type": "string", "enum": ["not_required", "pending", "resolved"], "default": "not_required" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "derived_metrics": {
+      "type": "object",
+      "description": "Per-scope rolling aggregates. Recomputed on repair_event insert/update via trigger.",
+      "required": ["scope_id", "computed_at"],
+      "properties": {
+        "scope_id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "rolling_12mo_spend_cents": { "type": "integer", "minimum": 0 },
+        "lifetime_spend_cents": { "type": "integer", "minimum": 0 },
+        "rolling_12mo_repair_count": { "type": "integer", "minimum": 0 },
+        "distal_tip_12mo_count": { "type": "integer", "minimum": 0 },
+        "wear_mode_spend_cents": { "type": "integer", "minimum": 0 },
+        "handling_mode_spend_cents": { "type": "integer", "minimum": 0 },
+        "threshold_ratio": { "type": ["number", "null"], "minimum": 0 },
+        "threshold_flag": { "type": "string", "enum": ["green", "yellow", "red", "insufficient_data"] },
+        "handling_audit_flag": { "type": "boolean" },
+        "avoided_replacement_estimate": { "type": "number", "minimum": 0 },
+        "loaner_days_attributable_12mo": { "type": "integer", "minimum": 0 },
+        "computed_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "vendor_metadata": {
+      "type": "object",
+      "description": "Repair vendor identity (classifier target). Not to be confused with scope OEM.",
+      "required": ["id", "org_id", "name", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "canonical_key": { "type": "string", "description": "lowercased, whitespace-collapsed name for dedupe" },
+        "category": {
+          "type": "string",
+          "enum": ["oem_direct", "iso_third_party", "internal_biomed", "unknown"]
+        },
+        "classification_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ingestion_audit": {
+      "type": "object",
+      "description": "One row per inbound artifact (email, uploaded PDF, Zoho-pushed invoice). Immutable.",
+      "required": ["id", "org_id", "source", "received_at", "idempotency_key"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "source": { "type": "string", "enum": ["postmark_inbound", "web_upload", "zoho_books_webhook", "zoho_crm_webhook", "manual_entry"] },
+        "idempotency_key": { "type": "string", "description": "Provider event_id / MessageID / checksum" },
+        "storage_path": { "type": ["string", "null"], "description": "Supabase Storage path to the raw artifact" },
+        "received_at": { "type": "string", "format": "date-time" },
+        "ocr_provider": { "type": ["string", "null"], "enum": [null, "aws_textract", "azure_document_intelligence", "none"] },
+        "ocr_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "classification_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "extraction_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "channel_kind": {
+          "type": ["string", "null"],
+          "enum": [null, "native_pdf", "scanned_pdf", "photo", "email_body"],
+          "description": "Input channel mix; Pro Light gate requires ≥55% native_pdf"
+        },
+        "status": { "type": "string", "enum": ["received", "ocr_ok", "classified", "extracted", "hitl_pending", "persisted", "failed"] },
+        "error": { "type": ["string", "null"] }
+      }
+    },
+    "capital_request": {
+      "type": "object",
+      "description": "Generated PDF artifact + approval state machine.",
+      "required": ["id", "org_id", "scope_id", "status", "created_at"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "org_id": { "type": "string", "format": "uuid" },
+        "scope_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "enum": ["draft", "clinical_review", "final", "rescinded"] },
+        "coverage_pct": { "type": "number", "minimum": 0, "maximum": 1 },
+        "min_field_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "dual_signer_required": { "type": "boolean" },
+        "clinical_reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "clinical_reviewed_by": { "type": ["string", "null"], "format": "uuid" },
+        "finalized_at": { "type": ["string", "null"], "format": "date-time" },
+        "pdf_storage_path": { "type": ["string", "null"] },
+        "pdf_sha256": { "type": ["string", "null"] },
+        "zoho_books_invoice_id": { "type": ["string", "null"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "billing": {
+      "type": "object",
+      "description": "Zoho Payments / Subscriptions mirror (source of truth is Zoho).",
+      "required": ["org_id", "zoho_subscription_id", "plan", "status", "synced_at"],
+      "properties": {
+        "org_id": { "type": "string", "format": "uuid" },
+        "zoho_subscription_id": { "type": "string" },
+        "zoho_customer_id": { "type": ["string", "null"] },
+        "plan": { "type": "string", "enum": ["pro_light", "pro_standard", "enterprise"] },
+        "status": { "type": "string", "enum": ["trial", "active", "past_due", "canceled", "paused"] },
+        "channel_mix_native_pdf_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "channel_mix_gate_met": { "type": ["boolean", "null"] },
+        "next_renewal_at": { "type": ["string", "null"], "format": "date-time" },
+        "synced_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
