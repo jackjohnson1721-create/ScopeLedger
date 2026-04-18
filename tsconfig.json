@@ -33,5 +33,5 @@
     ".next/types/**/*.ts",
     "types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist", "supabase/.branches"]
+  "exclude": ["node_modules", ".next", "dist", "supabase/.branches", "e2e", "playwright.config.ts"]
 }
