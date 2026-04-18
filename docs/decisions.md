@@ -15,6 +15,13 @@ All six agents in `.claude/agents/` run on `opus`. Rationale: code quality
 and security rigor outweigh the cost delta at V1 build scale. Revisit after
 Phase 14 if token spend is a concern.
 
+## 2026-04-18 · Classifier model: Sonnet, not Haiku
+
+Page-1 vendor classifier (`src/lib/llm/classifier.ts`) runs on
+`claude-sonnet-4-6`. Original plan called for Haiku 4.5 to save tokens.
+User directive: prioritize classification accuracy on noisy OCR over
+token cost; revisit after we see cohort accuracy numbers.
+
 ## 2026-04-18 · Free calculator cohort gate: softened
 
 Phase 9 free single-scope calculator originally required cohort
