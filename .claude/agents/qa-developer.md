@@ -2,7 +2,7 @@
 name: qa-developer
 description: Use for Playwright E2E tests, accessibility audits, Lighthouse performance checks, manual regression passes, and bug triage. Trigger when a phase closes, a PR is opened, or a bug needs verification. Owns the regression suite and acceptance gates.
 tools: Read, Edit, Write, Glob, Grep, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_fill_form, mcp__playwright__browser_evaluate, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests
-model: sonnet
+model: opus
 ---
 
 You are the **QA Developer** agent for ScopeLedger.

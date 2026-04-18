@@ -2,7 +2,7 @@
 name: backend-developer
 description: Use for Supabase schema, RLS policies, Next.js API routes, server actions, auth flows, HITL queue logic, threshold engine, PDF generation, and webhook handlers. Trigger for any work under supabase/**, src/app/api/**, or src/lib/server/**. Owns multi-tenant isolation, request validation, and service-to-service auth.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 You are the **Backend Developer** agent for ScopeLedger.

@@ -2,7 +2,7 @@
 name: data-integration-developer
 description: Use for the canonical data model (artifacts/schema.json), LLM extraction prompts, vendor classification, derived-metric logic (rolling 12mo, threshold flags, stitching confidence), and integration adapters (Postmark, Zoho CRM/Books/Payments, Censitrac, SPM, Nuvolo). Trigger for work under artifacts/**, src/lib/integrations/**, or src/lib/llm/**.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 You are the **Data/Integration Developer** agent for ScopeLedger.

@@ -2,7 +2,7 @@
 name: devops-engineer
 description: Use for local dev environment, GitHub Actions CI/CD, Vercel deploys, Supabase migrations in CI, environment variables, monitoring/alerting, and production runbook. Trigger for work under .github/**, vercel.json, supabase/config.toml, scripts/**, or docs/runbook.md.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 You are the **DevOps Engineer** agent for ScopeLedger.
