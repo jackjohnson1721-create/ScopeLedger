@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { supabaseService } from "@/lib/supabase/service";
+import { clientKey, consume } from "@/lib/security/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -23,6 +24,14 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const rl = consume(clientKey(request, "calc_lead"), { limit: 10, intervalMs: 60 * 60 * 1000 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
+
   let body: z.infer<typeof schema>;
   try {
     body = schema.parse(await request.json());

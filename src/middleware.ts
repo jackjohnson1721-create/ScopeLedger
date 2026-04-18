@@ -42,6 +42,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/hitl") ||
     request.nextUrl.pathname.startsWith("/admin") ||
     request.nextUrl.pathname.startsWith("/billing") ||
+    request.nextUrl.pathname.startsWith("/compliance") ||
     request.nextUrl.pathname.startsWith("/onboarding");
 
   if (isProtected && !user) {
