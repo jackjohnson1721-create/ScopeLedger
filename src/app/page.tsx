@@ -2,6 +2,16 @@ import Link from "next/link";
 import { Cloudscape } from "@/components/cloudscape";
 import { Reveal } from "@/components/reveal";
 
+function Compare({ title, differs }: { title: string; differs: string }) {
+  return (
+    <div className="rounded-2xl border border-cloud-100 bg-white p-5">
+      <div className="text-xs uppercase text-cloud-500">Not us:</div>
+      <div className="mt-1 font-medium text-cloud-900">{title}</div>
+      <p className="mt-3 text-cloud-700">{differs}</p>
+    </div>
+  );
+}
+
 const tiers = [
   {
     name: "Free",
@@ -130,6 +140,90 @@ export default function LandingPage() {
               <p className="mt-2 text-sm leading-relaxed text-cloud-700">{card.body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Demo */}
+      <section className="border-y border-cloud-100 bg-cloud-50 py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-12 md:grid-cols-2 md:items-center">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-cloud-600">How it works</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-cloud-900">
+                Forward an invoice. Get a ledger.
+              </h2>
+              <ol className="mt-8 space-y-5 text-sm text-cloud-800">
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cloud-900 text-xs text-white">1</span>
+                  <span>
+                    Forward repair invoices to your org&rsquo;s dedicated mailbox
+                    (<code className="rounded bg-white px-1 py-0.5 text-xs">slug@in.scopeledger.io</code>), or upload the PDF.
+                  </span>
+                </li>
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cloud-900 text-xs text-white">2</span>
+                  <span>
+                    Textract + Claude extract line items with per-field confidence. Anything below
+                    0.85 queues for human review.
+                  </span>
+                </li>
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cloud-900 text-xs text-white">3</span>
+                  <span>
+                    The threshold flag updates instantly per scope. When it hits red, one click
+                    renders the 8-section capital-request PDF with dual-signer block.
+                  </span>
+                </li>
+              </ol>
+              <div className="mt-8">
+                <Link
+                  href="/calculator"
+                  className="rounded-full bg-cloud-900 px-5 py-2.5 text-sm text-white hover:bg-cloud-800"
+                >
+                  Try it on one scope, free
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-cloud-200 bg-white p-6 shadow-lg">
+              <div className="flex items-center justify-between text-xs text-cloud-500">
+                <span>Scope SN-42 · Stryker 1588 AIM</span>
+                <span className="rounded bg-rose-100 px-2 py-0.5 text-rose-800">red</span>
+              </div>
+              <div className="mt-4 font-semibold text-cloud-900 text-2xl">
+                $18,400 <span className="text-sm font-normal text-cloud-500">12-mo spend</span>
+              </div>
+              <div className="mt-1 text-sm text-cloud-700">
+                61% of $30,000 replacement cost · threshold crossed 2025-03-12
+              </div>
+              <hr className="my-4 border-cloud-100" />
+              <ul className="text-xs text-cloud-700 space-y-1">
+                <li>2025-03-01 · Stryker Service · distal tip bent · $4,800</li>
+                <li>2024-12-19 · ISO Repair Co. · fiber broken · $3,200</li>
+                <li>2024-09-05 · Stryker Service · lens fogged · $5,100</li>
+                <li>2024-07-22 · ISO Repair Co. · sheath dented · $5,300</li>
+              </ul>
+              <hr className="my-4 border-cloud-100" />
+              <div className="text-xs text-cloud-500">Handling-audit flag: <span className="font-medium text-cloud-900">YES</span> &middot; 3 handling-mode events in 180 days</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Competitive positioning */}
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <p className="text-xs uppercase tracking-[0.2em] text-cloud-600">How we differ</p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-cloud-900">
+          Independent by design
+        </h2>
+        <div className="mt-10 grid gap-4 md:grid-cols-3 text-sm">
+          <Compare title="OEM service portals" differs="One vendor per portal. No cross-fleet rollup. Reports tuned to the OEM&rsquo;s upsell narrative." />
+          <Compare title="Generic CMMS (SPM, Nuvolo, Censitrac)" differs="Work orders, not capital decisions. No rolling-12mo threshold. No CFO-ready PDF." />
+          <Compare title="Spreadsheets" differs="Invisible to audit. No HITL quality control. No line-of-sight to replacement-ratio crossing." />
+        </div>
+        <div className="mt-8 text-sm text-cloud-700">
+          <Link href="/legal/editorial-independence" className="underline hover:text-cloud-900">
+            Read our editorial-independence charter &rarr;
+          </Link>
         </div>
       </section>
 
