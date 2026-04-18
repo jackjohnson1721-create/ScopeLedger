@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/zoho/sync",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "functions": {
+    "src/app/api/capital-request/[id]/pdf/route.ts": {
+      "memory": 2048,
+      "maxDuration": 60
+    },
+    "src/app/api/webhooks/postmark/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/compliance/upload/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "src/app/api/scopes/import/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}

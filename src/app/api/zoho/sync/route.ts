@@ -1,9 +1,10 @@
 /**
- * POST /api/zoho/sync
+ * GET/POST /api/zoho/sync
  *
  * Cron-callable endpoint that walks every org with a CRM connection and
  * pushes a health-ticker payload (flagged-scope count, 12mo spend,
- * plan). Designed to run every 15 minutes from Vercel Cron.
+ * plan). Designed to run every 15 minutes from Vercel Cron (Vercel
+ * Cron invokes GET).
  *
  * Auth: bearer token match against ZOHO_SYNC_CRON_SECRET.
  */
@@ -99,3 +100,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ synced: results.length, results });
 }
+
+export const GET = POST;
